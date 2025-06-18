@@ -1,0 +1,414 @@
+<svg viewBox="0 0 1600 400" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      .box { fill: #f0f8ff; stroke: #2c5282; stroke-width: 2; rx: 8; }
+      .process-box { fill: #e6fffa; stroke: #2d7748; stroke-width: 2; rx: 8; }
+      .native-box { fill: #fef5e7; stroke: #d69e2e; stroke-width: 2; rx: 8; }
+      .output-box { fill: #fed7d7; stroke: #c53030; stroke-width: 2; rx: 8; }
+      .text { font-family: Arial, sans-serif; font-size: 10px; text-anchor: middle; dominant-baseline: central; }
+      .title { font-family: Arial, sans-serif; font-size: 18px; font-weight: bold; text-anchor: middle; fill: #2c5282; }
+      .format-label { font-family: Arial, sans-serif; font-size: 8px; fill: #666; text-anchor: middle; }
+      .arrow { fill: none; stroke: #333; stroke-width: 2; marker-end: url(#arrowhead); }
+      .quality-note { font-family: Arial, sans-serif; font-size: 8px; fill: #c53030; text-anchor: middle; font-style: italic; }
+    </style>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#333" />
+    </marker>
+  </defs>
+  
+  <!-- Title -->
+  <text x="800" y="30" class="title">Path 3: AVC Preprocessing with NV21 Output</text>
+  
+  <!-- Step 1: Image Reader -->
+  <rect x="20" y="80" width="120" height="60" class="box"/>
+  <text x="80" y="100" class="text">Android</text>
+  <text x="80" y="115" class="text">Image Reader</text>
+  <text x="80" y="155" class="format-label">YUV420</text>
+  
+  <line x1="140" y1="110" x2="170" y2="110" class="arrow"/>
+  
+  <!-- Step 2: Convert to Buffer -->
+  <rect x="180" y="80" width="100" height="60" class="process-box"/>
+  <text x="230" y="105" class="text">Convert to</text>
+  <text x="230" y="120" class="text">Buffer</text>
+  
+  <line x1="280" y1="110" x2="310" y2="110" class="arrow"/>
+  
+  <!-- Step 3: Native Function -->
+  <rect x="320" y="80" width="120" height="60" class="native-box"/>
+  <text x="380" y="100" class="text">Pass to Native</text>
+  <text x="380" y="115" class="text">encode() Function</text>
+  
+  <line x1="440" y1="110" x2="470" y2="110" class="arrow"/>
+  
+  <!-- Step 4: Upscale -->
+  <rect x="480" y="80" width="120" height="60" class="native-box"/>
+  <text x="540" y="95" class="text">Upscale</text>
+  <text x="540" y="110" class="text">YUV420 → YUV422</text>
+  <text x="540" y="125" class="text">(Quality degradation)</text>
+  <text x="540" y="155" class="quality-note">⚠ Quality Loss</text>
+  
+  <line x1="600" y1="110" x2="630" y2="110" class="arrow"/>
+  
+  <!-- Step 5: AVC Encode -->
+  <rect x="640" y="80" width="100" height="60" class="native-box"/>
+  <text x="690" y="105" class="text">AVC</text>
+  <text x="690" y="120" class="text">Encode</text>
+  
+  <line x1="740" y1="110" x2="770" y2="110" class="arrow"/>
+  
+  <!-- Step 6: AVC Decode -->
+  <rect x="780" y="80" width="100" height="60" class="native-box"/>
+  <text x="830" y="105" class="text">AVC</text>
+  <text x="830" y="120" class="text">Decode</text>
+  
+  <line x1="880" y1="110" x2="910" y2="110" class="arrow"/>
+  
+  <!-- Step 7: Reconstruction -->
+  <rect x="920" y="80" width="120" height="60" class="native-box"/>
+  <text x="980" y="105" class="text">Reconstruction</text>
+  <text x="980" y="155" class="format-label">YUV422</text>
+  
+  <line x1="1040" y1="110" x2="1070" y2="110" class="arrow"/>
+  
+  <!-- Step 8: PSNR Calculation -->
+  <rect x="1080" y="80" width="120" height="60" class="process-box"/>
+  <text x="1140" y="95" class="text">Calculate PSNR</text>
+  <text x="1140" y="110" class="text">(Input buffer vs</text>
+  <text x="1140" y="125" class="text">Reconstruction)</text>
+  
+  <line x1="1200" y1="110" x2="1230" y2="110" class="arrow"/>
+  
+  <!-- Step 9: Convert to NV21 -->
+  <rect x="1240" y="80" width="100" height="60" class="process-box"/>
+  <text x="1290" y="95" class="text">Convert</text>
+  <text x="1290" y="110" class="text">YUV422</text>
+  <text x="1290" y="125" class="text">→ NV21</text>
+  
+  <line x1="1340" y1="110" x2="1370" y2="110" class="arrow"/>
+  
+  <!-- Step 10: Compress & Save -->
+  <rect x="1380" y="80" width="120" height="60" class="process-box"/>
+  <text x="1440" y="95" class="text">compressToJpeg()</text>
+  <text x="1440" y="110" class="text">Save JPEG</text>
+  <text x="1440" y="125" class="text">Display PSNR</text>
+  
+  <!-- Step 11: Final Output -->
+  <rect x="1520" y="80" width="60" height="60" class="output-box"/>
+  <text x="1550" y="105" class="text">JPEG</text>
+  <text x="1550" y="120" class="text">Output</text>
+  
+  <line x1="1500" y1="110" x2="1520" y2="110" class="arrow"/>
+  
+  <!-- Process Flow Labels -->
+  <text x="80" y="200" class="text" fill="#2c5282">Android Layer</text>
+  <text x="350" y="200" class="text" fill="#d69e2e">Native Processing Entry</text>
+  <text x="760" y="200" class="text" fill="#d69e2e">AVC Core Processing</text>
+  <text x="1140" y="200" class="text" fill="#2d7748">Quality Assessment</text>
+  <text x="1440" y="200" class="text" fill="#c53030">Output Generation</text>
+  
+  <!-- Legend -->
+  <g transform="translate(50, 250)">
+    <text x="0" y="0" class="title" fill="#333" font-size="14">Processing Stages:</text>
+    <rect x="0" y="20" width="20" height="15" class="box"/>
+    <text x="30" y="28" class="text" text-anchor="start">Android Processing</text>
+    <rect x="200" y="20" width="20" height="15" class="process-box"/>
+    <text x="230" y="28" class="text" text-anchor="start">Format Conversion</text>
+    <rect x="400" y="20" width="20" height="15" class="native-box"/>
+    <text x="430" y="28" class="text" text-anchor="start">Native/AVC Processing</text>
+    <rect x="600" y="20" width="20" height="15" class="output-box"/>
+    <text x="630" y="28" class="text" text-anchor="start">Final Output</text>
+  </g>
+  
+  <!-- Key Features -->
+  <g transform="translate(50, 310)">
+    <text x="0" y="0" class="title" fill="#c53030" font-size="14">Path 3 Key Features:</text>
+    <text x="0" y="25" class="text" text-anchor="start" fill="#333">• PSNR calculation between input buffer and reconstruction</text>
+    <text x="0" y="45" class="text" text-anchor="start" fill="#333">• Quality assessment with toast message display</text>
+    <text x="0" y="65" class="text" text-anchor="start" fill="#333">• Final output in NV21 format before JPEG compression</text>
+  </g>
+</svg>
+
+
+
+
+
+<svg viewBox="0 0 1500 400" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      .box { fill: #f0f8ff; stroke: #2c5282; stroke-width: 2; rx: 8; }
+      .process-box { fill: #e6fffa; stroke: #2d7748; stroke-width: 2; rx: 8; }
+      .native-box { fill: #fef5e7; stroke: #d69e2e; stroke-width: 2; rx: 8; }
+      .primary-box { fill: #e6f3ff; stroke: #2d7748; stroke-width: 3; rx: 8; }
+      .output-box { fill: #fed7d7; stroke: #c53030; stroke-width: 2; rx: 8; }
+      .text { font-family: Arial, sans-serif; font-size: 10px; text-anchor: middle; dominant-baseline: central; }
+      .title { font-family: Arial, sans-serif; font-size: 18px; font-weight: bold; text-anchor: middle; fill: #2d7748; }
+      .format-label { font-family: Arial, sans-serif; font-size: 8px; fill: #666; text-anchor: middle; }
+      .arrow { fill: none; stroke: #333; stroke-width: 2; marker-end: url(#arrowhead); }
+      .quality-note { font-family: Arial, sans-serif; font-size: 8px; fill: #c53030; text-anchor: middle; font-style: italic; }
+      .primary-note { font-family: Arial, sans-serif; font-size: 8px; fill: #2d7748; text-anchor: middle; font-weight: bold; }
+    </style>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#333" />
+    </marker>
+  </defs>
+  
+  <!-- Title -->
+  <text x="750" y="30" class="title">Path 4: AVC Preprocessing with YUY2 Output (Primary Comparison Path)</text>
+  
+  <!-- Step 1: Image Reader -->
+  <rect x="20" y="80" width="120" height="60" class="box"/>
+  <text x="80" y="100" class="text">Android</text>
+  <text x="80" y="115" class="text">Image Reader</text>
+  <text x="80" y="155" class="format-label">YUV420</text>
+  
+  <line x1="140" y1="110" x2="170" y2="110" class="arrow"/>
+  
+  <!-- Step 2: Convert to Buffer -->
+  <rect x="180" y="80" width="100" height="60" class="process-box"/>
+  <text x="230" y="105" class="text">Convert to</text>
+  <text x="230" y="120" class="text">Buffer</text>
+  
+  <line x1="280" y1="110" x2="310" y2="110" class="arrow"/>
+  
+  <!-- Step 3: Native Function -->
+  <rect x="320" y="80" width="120" height="60" class="native-box"/>
+  <text x="380" y="100" class="text">Pass to Native</text>
+  <text x="380" y="115" class="text">encode() Function</text>
+  
+  <line x1="440" y1="110" x2="470" y2="110" class="arrow"/>
+  
+  <!-- Step 4: Upscale -->
+  <rect x="480" y="80" width="120" height="60" class="native-box"/>
+  <text x="540" y="95" class="text">Upscale</text>
+  <text x="540" y="110" class="text">YUV420 → YUV422</text>
+  <text x="540" y="125" class="text">(Quality degradation)</text>
+  <text x="540" y="155" class="quality-note">⚠ Quality Loss</text>
+  
+  <line x1="600" y1="110" x2="630" y2="110" class="arrow"/>
+  
+  <!-- Step 5: AVC Encode -->
+  <rect x="640" y="80" width="100" height="60" class="native-box"/>
+  <text x="690" y="105" class="text">AVC</text>
+  <text x="690" y="120" class="text">Encode</text>
+  
+  <line x1="740" y1="110" x2="770" y2="110" class="arrow"/>
+  
+  <!-- Step 6: AVC Decode -->
+  <rect x="780" y="80" width="100" height="60" class="native-box"/>
+  <text x="830" y="105" class="text">AVC</text>
+  <text x="830" y="120" class="text">Decode</text>
+  
+  <line x1="880" y1="110" x2="910" y2="110" class="arrow"/>
+  
+  <!-- Step 7: Reconstruction -->
+  <rect x="920" y="80" width="120" height="60" class="native-box"/>
+  <text x="980" y="105" class="text">Reconstruction</text>
+  <text x="980" y="155" class="format-label">YUV422</text>
+  
+  <line x1="1040" y1="110" x2="1070" y2="110" class="arrow"/>
+  
+  <!-- Step 8: Convert to YUY2 (Primary Difference) -->
+  <rect x="1080" y="80" width="120" height="60" class="primary-box"/>
+  <text x="1140" y="95" class="text">Convert</text>
+  <text x="1140" y="110" class="text">YUV422 → YUY2</text>
+  <text x="1140" y="155" class="primary-note">Primary Comparison</text>
+  <text x="1140" y="170" class="format-label">Both formats: YUV422</text>
+  
+  <line x1="1200" y1="110" x2="1230" y2="110" class="arrow"/>
+  
+  <!-- Step 9: Compress -->
+  <rect x="1240" y="80" width="100" height="60" class="process-box"/>
+  <text x="1290" y="105" class="text">compressToJpeg()</text>
+  
+  <line x1="1340" y1="110" x2="1370" y2="110" class="arrow"/>
+  
+  <!-- Step 10: Save -->
+  <rect x="1380" y="80" width="100" height="60" class="output-box"/>
+  <text x="1430" y="105" class="text">Save JPEG</text>
+  <text x="1430" y="120" class="text">Output</text>
+  
+  <!-- Process Flow Labels -->
+  <text x="80" y="200" class="text" fill="#2c5282">Android Layer</text>
+  <text x="350" y="200" class="text" fill="#d69e2e">Native Processing Entry</text>
+  <text x="760" y="200" class="text" fill="#d69e2e">AVC Core Processing</text>
+  <text x="1140" y="200" class="text" fill="#2d7748">Format Optimization</text>
+  <text x="1430" y="200" class="text" fill="#c53030">Final Output</text>
+  
+  <!-- Comparison Highlight -->
+  <g transform="translate(1080, 190)">
+    <rect x="0" y="0" width="120" height="80" fill="none" stroke="#2d7748" stroke-width="2" stroke-dasharray="5,5" rx="8"/>
+    <text x="60" y="90" class="primary-note">Key Advantage:</text>
+    <text x="60" y="105" class="text" text-anchor="middle" fill="#2d7748">No format mismatch</text>
+  </g>
+  
+  <!-- Legend -->
+  <g transform="translate(50, 250)">
+    <text x="0" y="0" class="title" fill="#333" font-size="14">Processing Stages:</text>
+    <rect x="0" y="20" width="20" height="15" class="box"/>
+    <text x="30" y="28" class="text" text-anchor="start">Android Processing</text>
+    <rect x="200" y="20" width="20" height="15" class="process-box"/>
+    <text x="230" y="28" class="text" text-anchor="start">Format Conversion</text>
+    <rect x="400" y="20" width="20" height="15" class="native-box"/>
+    <text x="430" y="28" class="text" text-anchor="start">Native/AVC Processing</text>
+    <rect x="600" y="20" width="20" height="15" class="primary-box"/>
+    <text x="630" y="28" class="text" text-anchor="start">Primary Comparison Step</text>
+    <rect x="800" y="20" width="20" height="15" class="output-box"/>
+    <text x="830" y="28" class="text" text-anchor="start">Final Output</text>
+  </g>
+  
+  <!-- Key Features -->
+  <g transform="translate(50, 310)">
+    <text x="0" y="0" class="title" fill="#2d7748" font-size="14">Path 4 Key Features:</text>
+    <text x="0" y="25" class="text" text-anchor="start" fill="#333">• Primary comparison path for quality assessment</text>
+    <text x="0" y="45" class="text" text-anchor="start" fill="#333">• YUY2 and reconstruction both use YUV422 format (no format mismatch)</text>
+    <text x="0" y="65" class="text" text-anchor="start" fill="#333">• Optimized for direct quality comparison without PSNR calculation overhead</text>
+  </g>
+</svg>
+
+
+
+
+<svg viewBox="0 0 800 300" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      .box { fill: #f0f8ff; stroke: #2c5282; stroke-width: 2; rx: 8; }
+      .baseline-box { fill: #f0fff0; stroke: #22543d; stroke-width: 3; rx: 8; }
+      .output-box { fill: #fed7d7; stroke: #c53030; stroke-width: 2; rx: 8; }
+      .text { font-family: Arial, sans-serif; font-size: 12px; text-anchor: middle; dominant-baseline: central; }
+      .title { font-family: Arial, sans-serif; font-size: 18px; font-weight: bold; text-anchor: middle; fill: #22543d; }
+      .format-label { font-family: Arial, sans-serif; font-size: 9px; fill: #666; text-anchor: middle; }
+      .arrow { fill: none; stroke: #333; stroke-width: 3; marker-end: url(#arrowhead); }
+      .baseline-note { font-family: Arial, sans-serif; font-size: 10px; fill: #22543d; text-anchor: middle; font-weight: bold; }
+    </style>
+    <marker id="arrowhead" markerWidth="12" markerHeight="9" refX="11" refY="4.5" orient="auto">
+      <polygon points="0 0, 12 4.5, 0 9" fill="#333" />
+    </marker>
+  </defs>
+  
+  <!-- Title -->
+  <text x="400" y="30" class="title">Path 1: Direct JPEG Save (Baseline/Reference Path)</text>
+  
+  <!-- Step 1: Image Reader -->
+  <rect x="50" y="80" width="150" height="80" class="box"/>
+  <text x="125" y="110" class="text">Android</text>
+  <text x="125" y="130" class="text">Image Reader</text>
+  <text x="125" y="175" class="format-label">Native Image Format</text>
+  
+  <line x1="200" y1="120" x2="250" y2="120" class="arrow"/>
+  
+  <!-- Step 2: Direct JPEG Save -->
+  <rect x="260" y="80" width="200" height="80" class="baseline-box"/>
+  <text x="360" y="105" class="text">Direct JPEG Format Save</text>
+  <text x="360" y="125" class="text">(No Processing)</text>
+  <text x="360" y="145" class="text">Baseline Reference</text>
+  <text x="360" y="175" class="baseline-note">Simplest Path</text>
+  
+  <line x1="460" y1="120" x2="510" y2="120" class="arrow"/>
+  
+  <!-- Step 3: Final Output -->
+  <rect x="520" y="80" width="150" height="80" class="output-box"/>
+  <text x="595" y="110" class="text">JPEG Output</text>
+  <text x="595" y="130" class="text">(Reference Quality)</text>
+  <text x="595" y="175" class="format-label">Unprocessed Baseline</text>
+  
+  <!-- Process Flow Label -->
+  <text x="125" y="200" class="text" fill="#2c5282">Android Layer</text>
+  <text x="360" y="200" class="text" fill="#22543d">Direct Save (No Processing)</text>
+  <text x="595" y="200" class="text" fill="#c53030">Baseline Output</text>
+  
+  <!-- Key Features -->
+  <g transform="translate(50, 230)">
+    <text x="0" y="0" class="title" fill="#22543d" font-size="14">Path 1 Characteristics:</text>
+    <text x="0" y="25" class="text" text-anchor="start" fill="#333">• Simplest processing path - no format conversions or preprocessing</text>
+    <text x="0" y="45" class="text" text-anchor="start" fill="#333">• Serves as baseline/reference for quality comparison with other paths</text>
+    <text x="0" y="65" class="text" text-anchor="start" fill="#333">• Direct JPEG save maintains original image quality without any processing overhead</text>
+  </g>
+</svg>
+
+
+
+<svg viewBox="0 0 1200 350" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      .box { fill: #f0f8ff; stroke: #2c5282; stroke-width: 2; rx: 8; }
+      .control-box { fill: #fff5f5; stroke: #e53e3e; stroke-width: 2; rx: 8; }
+      .process-box { fill: #e6fffa; stroke: #2d7748; stroke-width: 2; rx: 8; }
+      .output-box { fill: #fed7d7; stroke: #c53030; stroke-width: 2; rx: 8; }
+      .text { font-family: Arial, sans-serif; font-size: 11px; text-anchor: middle; dominant-baseline: central; }
+      .title { font-family: Arial, sans-serif; font-size: 18px; font-weight: bold; text-anchor: middle; fill: #e53e3e; }
+      .format-label { font-family: Arial, sans-serif; font-size: 9px; fill: #666; text-anchor: middle; }
+      .arrow { fill: none; stroke: #333; stroke-width: 2; marker-end: url(#arrowhead); }
+      .control-note { font-family: Arial, sans-serif; font-size: 9px; fill: #e53e3e; text-anchor: middle; font-weight: bold; }
+    </style>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#333" />
+    </marker>
+  </defs>
+  
+  <!-- Title -->
+  <text x="600" y="30" class="title">Path 2: Control Path (Mimics Path 3/4 Format Without Preprocessing)</text>
+  
+  <!-- Step 1: Image Reader -->
+  <rect x="30" y="80" width="140" height="70" class="box"/>
+  <text x="100" y="105" class="text">Android</text>
+  <text x="100" y="125" class="text">Image Reader</text>
+  <text x="100" y="165" class="format-label">YUV420 (Native)</text>
+  
+  <line x1="170" y1="115" x2="200" y2="115" class="arrow"/>
+  
+  <!-- Step 2: Convert to NV21 -->
+  <rect x="210" y="80" width="140" height="70" class="control-box"/>
+  <text x="280" y="105" class="text">Convert to NV21</text>
+  <text x="280" y="125" class="text">(Same format as</text>
+  <text x="280" y="140" class="text">Path 3 output)</text>
+  <text x="280" y="165" class="control-note">Control Processing</text>
+  
+  <line x1="350" y1="115" x2="380" y2="115" class="arrow"/>
+  
+  <!-- Step 3: Compress to JPEG -->
+  <rect x="390" y="80" width="140" height="70" class="process-box"/>
+  <text x="460" y="110" class="text">compressToJpeg()</text>
+  <text x="460" y="130" class="text">Function</text>
+  
+  <line x1="530" y1="115" x2="560" y2="115" class="arrow"/>
+  
+  <!-- Step 4: Save -->
+  <rect x="570" y="80" width="140" height="70" class="output-box"/>
+  <text x="640" y="110" class="text">Save JPEG</text>
+  <text x="640" y="130" class="text">Output</text>
+  
+  <!-- Purpose Box -->
+  <rect x="750" y="80" width="200" height="70" class="control-box" stroke="#e53e3e" stroke-width="3"/>
+  <text x="850" y="100" class="text" font-weight="bold">Control Purpose:</text>
+  <text x="850" y="120" class="text">Ensures equal format</text>
+  <text x="850" y="135" class="text">comparison with</text>
+  <text x="850" y="150" class="text">preprocessed paths</text>
+  
+  <line x1="710" y1="115" x2="750" y2="115" class="arrow"/>
+  
+  <!-- Process Flow Labels -->
+  <text x="100" y="190" class="text" fill="#2c5282">Android Layer</text>
+  <text x="280" y="190" class="text" fill="#e53e3e">Control Conversion</text>
+  <text x="460" y="190" class="text" fill="#2d7748">Compression</text>
+  <text x="640" y="190" class="text" fill="#c53030">Output</text>
+  <text x="850" y="190" class="text" fill="#e53e3e">Quality Control</text>
+  
+  <!-- Comparison Flow -->
+  <g transform="translate(30, 220)">
+    <rect x="0" y="0" width="920" height="60" fill="#f7fafc" stroke="#e2e8f0" stroke-width="1" rx="8"/>
+    <text x="460" y="20" class="title" fill="#e53e3e" font-size="14">Format Comparison Logic:</text>
+    <text x="50" y="40" class="text" text-anchor="start" fill="#333">Path 2 (Control): YUV420 → NV21 → JPEG</text>
+    <text x="50" y="55" class="text" text-anchor="start" fill="#333">Path 3 (AVC): YUV420 → YUV422 → AVC Processing → YUV422 → NV21 → JPEG</text>
+  </g>
+  
+  <!-- Key Features -->
+  <g transform="translate(50, 300)">
+    <text x="0" y="0" class="title" fill="#e53e3e" font-size="14">Path 2 Key Features:</text>
+    <text x="0" y="25" class="text" text-anchor="start" fill="#333">• Mimics the format conversion of Path 3/4 without actual AVC preprocessing</text>
+    <text x="0" y="45" class="text" text-anchor="start" fill="#333">• Ensures fair comparison by using same final format (NV21 → JPEG) as preprocessed paths</text>
+    <text x="0" y="65" class="text" text-anchor="start" fill="#333">• Control group to isolate the effects of AVC preprocessing vs. format conversion alone</text>
+  </g>
+</svg>
+
+
