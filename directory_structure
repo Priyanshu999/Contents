@@ -1,0 +1,22 @@
+scaleNetUpDemo
+  -manifests
+    -AndroidManifest.xml
+  -java
+    -com.example.demoisp
+      -demorawrec
+  -cpp
+    -CAMERA_ENC_DEC
+      -inc
+         -oapv.h
+         -oapv_app_util.h
+      -nisp_jni_s25.cpp
+  -includes
+    -NDK
+  -jniLibs
+    -arm64-v8a
+      -libc++.so
+      -liboapv.so
+res
+  -layout
+    -main.xml
+
