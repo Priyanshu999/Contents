@@ -1,0 +1,207 @@
+<!-- AndroidManifesst.xml  -->
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-feature android:glEsVersion="0x00020000" /> <!-- INTERNET is needed to use a URI-based media player, depending on the URI -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="com.samsung.android.permission.SSRM_NOTIFICATION_PERMISSION" />
+    <uses-permission android:name="com.samsung.android.providers.media.READ" />
+    <uses-permission android:name="com.sec.spp.permission.TOKEN_8b2574a4e8e6d29bcb29d15c8559410cb689aada00725d61183d90eec1edae8e394a8932b22b8ecbf0365ee4dbe7f36641875bc8344a76eb25597b65e92fd98e1c1b4c73ca3b8f7622ea5dbee6c606f7d75c08b78ea5f24e8c90444c1ae9061841275f2489311c844fcb83c28c5c9dc4f8cee793e9f55049872b1bb70c4c0678" />
+
+    <uses-feature android:name="com.samsung.feature.device_category_phone_high_end" />
+    <uses-feature
+        android:name="android.hardware.camera"
+        android:required="false" />
+
+    <application
+        android:requestLegacyExternalStorage="true"
+        android:allowBackup="true"
+        android:icon="@mipmap/video_player"
+        android:label="NISP DEMO"
+        android:roundIcon="@mipmap/video_player"
+        android:supportsRtl="true"
+        android:theme="@style/AppTheme.Green">
+        <uses-native-library
+            android:name="libsnap_aidl.snap.samsung.so"
+            android:required="false"/>
+        <!-- android:theme="@style/Theme.AppCompat.Light.DarkActionBar" -->
+        <activity
+            android:name=".demorawrec"
+            android:exported="true"
+            android:screenOrientation="portrait">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+
+</manifest>
+
+<!-- layout/main.xml  -->
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@android:color/black"
+    tools:context=".demorawrec">
+
+    <TextureView
+        android:id="@+id/texture"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_above="@+id/bottom_controls"
+        android:keepScreenOn="true" />
+
+    <LinearLayout
+        android:id="@+id/left_seekbar_container"
+        android:layout_width="60dp"
+        android:layout_height="match_parent"
+        android:layout_alignParentStart="true"
+        android:layout_above="@+id/bottom_controls"
+        android:layout_marginTop="60dp"
+        android:layout_marginBottom="60dp"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:background="#80000000"
+        android:padding="8dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="4dp"
+            android:text="QP"
+            android:textColor="@android:color/white"
+            android:textSize="12sp" />
+
+        <TextView
+            android:id="@+id/qp_value_text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="25"
+            android:textColor="@android:color/white"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="170dp" />
+
+        <SeekBar
+            android:id="@+id/qp_seekbar"
+            android:layout_width="400dp"
+            android:layout_height="40dp"
+            android:max="51"
+            android:progress="25"
+            android:progressTint="@android:color/holo_blue_light"
+            android:rotation="270"
+            android:thumbTint="@android:color/white" />
+
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/right_seekbar_container"
+        android:layout_width="60dp"
+        android:layout_height="match_parent"
+        android:layout_alignParentEnd="true"
+        android:layout_above="@+id/bottom_controls"
+        android:layout_marginTop="60dp"
+        android:layout_marginBottom="60dp"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:background="#80000000"
+        android:padding="8dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Quality"
+            android:textColor="@android:color/white"
+            android:textSize="12sp"
+            android:layout_marginBottom="4dp" />
+
+        <TextView
+            android:id="@+id/quality_value_text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="85"
+            android:textColor="@android:color/white"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="170dp" />
+
+        <SeekBar
+            android:id="@+id/quality_seekbar"
+            android:layout_width="400dp"
+            android:layout_height="40dp"
+            android:max="100"
+            android:progress="85"
+            android:progressTint="@android:color/holo_green_light"
+            android:rotation="270"
+            android:thumbTint="@android:color/white" />
+
+
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/bottom_controls"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:background="#80000000"
+        android:gravity="center"
+        android:orientation="horizontal"
+        android:padding="16dp">
+
+        <Button
+            android:id="@+id/btn_takepicture"
+            android:layout_width="80dp"
+            android:layout_height="80dp"
+            android:background="@drawable/ic_action_info"/>
+
+    </LinearLayout>
+
+    <ProgressBar
+        android:id="@+id/processing_indicator"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerInParent="true"
+        android:visibility="gone"
+        style="?android:attr/progressBarStyleLarge" />
+
+    <TextView
+        android:id="@+id/status_text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentTop="true"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="32dp"
+        android:background="#80000000"
+        android:padding="8dp"
+        android:text="Camera Ready"
+        android:textColor="@android:color/white"
+        android:textSize="14sp"
+        android:visibility="gone" />
+
+    <!-- Test Mode Toggle Button -->
+    <Button
+        android:id="@+id/btn_test_mode"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentTop="true"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="16dp"
+        android:background="#CC000000"
+        android:paddingHorizontal="16dp"
+        android:paddingVertical="8dp"
+        android:text="Mode: Vary Quality"
+        android:textColor="@android:color/white"
+        android:textSize="12sp"
+        android:minHeight="40dp" />
+
+</RelativeLayout>
+
