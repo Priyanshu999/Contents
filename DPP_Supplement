@@ -1,0 +1,511 @@
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+import numpy as np
+from torch.utils.data import Dataset, DataLoader
+from torchvision import transforms
+from PIL import Image
+import os
+import cv2
+from pathlib import Path
+
+class ImageDataset(Dataset):
+    """Dataset class for loading images for DPP training"""
+    
+    def __init__(self, image_dir, transform=None, patch_size=256, channels='Y'):
+        """
+        Args:
+            image_dir: Directory containing training images
+            transform: Optional transforms to apply
+            patch_size: Size of patches to extract from images
+            channels: 'Y' for luminance only, 'RGB' for all channels
+        """
+        self.image_dir = Path(image_dir)
+        self.patch_size = patch_size
+        self.channels = channels
+        
+        # Get list of image files
+        self.image_files = []
+        for ext in ['*.jpg', '*.jpeg', '*.png', '*.bmp', '*.tiff']:
+            self.image_files.extend(list(self.image_dir.glob(ext)))
+            self.image_files.extend(list(self.image_dir.glob(ext.upper())))
+        
+        if len(self.image_files) == 0:
+            raise ValueError(f"No image files found in {image_dir}")
+        
+        print(f"Found {len(self.image_files)} images in dataset")
+        
+        # Default transforms
+        if transform is None:
+            self.transform = transforms.Compose([
+                transforms.ToTensor(),
+                transforms.Normalize(mean=[0.5], std=[0.5]) if channels == 'Y' 
+                else transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+            ])
+        else:
+            self.transform = transform
+    
+    def __len__(self):
+        # Generate multiple patches per image
+        return len(self.image_files) * 4  # 4 patches per image
+    
+    def __getitem__(self, idx):
+        # Get image index and patch index
+        img_idx = idx // 4
+        patch_idx = idx % 4
+        
+        # Load image
+        img_path = self.image_files[img_idx]
+        image = Image.open(img_path).convert('RGB')
+        
+        # Convert to numpy for processing
+        img_array = np.array(image)
+        
+        # Convert to Y channel if needed
+        if self.channels == 'Y':
+            # Convert RGB to YUV and extract Y channel
+            yuv = cv2.cvtColor(img_array, cv2.COLOR_RGB2YUV)
+            img_array = yuv[:, :, 0]  # Y channel only
+        
+        # Extract random patch
+        h, w = img_array.shape[:2]
+        
+        # Ensure image is large enough
+        if h < self.patch_size or w < self.patch_size:
+            # Resize image if too small
+            if self.channels == 'Y':
+                img_array = cv2.resize(img_array, (self.patch_size, self.patch_size))
+            else:
+                img_array = cv2.resize(img_array, (self.patch_size, self.patch_size))
+            h, w = self.patch_size, self.patch_size
+        
+        # Random crop
+        top = np.random.randint(0, h - self.patch_size + 1)
+        left = np.random.randint(0, w - self.patch_size + 1)
+        
+        if self.channels == 'Y':
+            patch = img_array[top:top+self.patch_size, left:left+self.patch_size]
+        else:
+            patch = img_array[top:top+self.patch_size, left:left+self.patch_size, :]
+        
+        # Convert to PIL Image for transforms
+        if self.channels == 'Y':
+            patch_pil = Image.fromarray(patch, mode='L')
+        else:
+            patch_pil = Image.fromarray(patch)
+        
+        # Apply transforms
+        if self.transform:
+            patch_tensor = self.transform(patch_pil)
+        else:
+            patch_tensor = torch.tensor(patch).float() / 255.0
+            if self.channels == 'Y':
+                patch_tensor = patch_tensor.unsqueeze(0)
+            else:
+                patch_tensor = patch_tensor.permute(2, 0, 1)
+        
+        return {
+            'frames': patch_tensor,
+            'filename': img_path.name
+        }
+
+
+class VideoPatchDataset(Dataset):
+    """Dataset for video frames - extracts patches from video files"""
+    
+    def __init__(self, video_dir, transform=None, patch_size=256, 
+                 frames_per_video=50, channels='Y'):
+        """
+        Args:
+            video_dir: Directory containing video files
+            frames_per_video: Number of frames to extract per video
+        """
+        self.video_dir = Path(video_dir)
+        self.patch_size = patch_size
+        self.frames_per_video = frames_per_video
+        self.channels = channels
+        
+        # Get video files
+        self.video_files = []
+        for ext in ['*.mp4', '*.avi', '*.mov', '*.mkv']:
+            self.video_files.extend(list(self.video_dir.glob(ext)))
+        
+        if len(self.video_files) == 0:
+            raise ValueError(f"No video files found in {video_dir}")
+        
+        print(f"Found {len(self.video_files)} videos in dataset")
+        
+        # Extract frames from all videos
+        self.frames = self._extract_frames()
+        
+        # Transforms
+        if transform is None:
+            self.transform = transforms.Compose([
+                transforms.ToTensor(),
+                transforms.Normalize(mean=[0.5], std=[0.5]) if channels == 'Y' 
+                else transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+            ])
+        else:
+            self.transform = transform
+    
+    def _extract_frames(self):
+        """Extract frames from all videos"""
+        all_frames = []
+        
+        for video_path in self.video_files:
+            cap = cv2.VideoCapture(str(video_path))
+            total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+            
+            if total_frames < self.frames_per_video:
+                frame_indices = list(range(total_frames))
+            else:
+                # Sample frames uniformly
+                frame_indices = np.linspace(0, total_frames-1, 
+                                          self.frames_per_video, dtype=int)
+            
+            for frame_idx in frame_indices:
+                cap.set(cv2.CAP_PROP_POS_FRAMES, frame_idx)
+                ret, frame = cap.read()
+                
+                if ret:
+                    # Convert BGR to RGB
+                    frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                    all_frames.append({
+                        'frame': frame_rgb,
+                        'video': video_path.name,
+                        'frame_idx': frame_idx
+                    })
+            
+            cap.release()
+        
+        print(f"Extracted {len(all_frames)} frames total")
+        return all_frames
+    
+    def __len__(self):
+        return len(self.frames) * 2  # 2 patches per frame
+    
+    def __getitem__(self, idx):
+        frame_idx = idx // 2
+        frame_data = self.frames[frame_idx]
+        
+        img_array = frame_data['frame']
+        
+        # Convert to Y channel if needed
+        if self.channels == 'Y':
+            yuv = cv2.cvtColor(img_array, cv2.COLOR_RGB2YUV)
+            img_array = yuv[:, :, 0]
+        
+        # Extract patch
+        h, w = img_array.shape[:2]
+        
+        if h < self.patch_size or w < self.patch_size:
+            if self.channels == 'Y':
+                img_array = cv2.resize(img_array, (self.patch_size, self.patch_size))
+            else:
+                img_array = cv2.resize(img_array, (self.patch_size, self.patch_size))
+            h, w = self.patch_size, self.patch_size
+        
+        # Random crop
+        top = np.random.randint(0, h - self.patch_size + 1)
+        left = np.random.randint(0, w - self.patch_size + 1)
+        
+        if self.channels == 'Y':
+            patch = img_array[top:top+self.patch_size, left:left+self.patch_size]
+            patch_pil = Image.fromarray(patch, mode='L')
+        else:
+            patch = img_array[top:top+self.patch_size, left:left+self.patch_size, :]
+            patch_pil = Image.fromarray(patch)
+        
+        # Apply transforms
+        patch_tensor = self.transform(patch_pil)
+        
+        return {
+            'frames': patch_tensor,
+            'video': frame_data['video'],
+            'frame_idx': frame_data['frame_idx']
+        }
+
+
+# Modified DPPTrainer with dataset integration
+class DPPTrainerWithDataset:
+    """Enhanced DPP Trainer with dataset support"""
+    
+    def __init__(self, device='cuda'):
+        self.device = device
+        
+        # Initialize networks (same as before)
+        from your_original_file import DeepPerceptualPreprocessor, PerceptualModel, VirtualCodec
+        
+        self.preprocessor = DeepPerceptualPreprocessor().to(device)
+        self.perceptual_model = PerceptualModel().to(device)
+        
+        # Freeze perceptual model
+        for param in self.perceptual_model.parameters():
+            param.requires_grad = False
+        
+        self.codec = VirtualCodec()
+        self.optimizer = torch.optim.Adam(self.preprocessor.parameters(), lr=1e-4)
+        
+        # Loss weights
+        self.lambda_rate = 0.01
+        self.gamma_perceptual = 0.01
+        self.alpha_l1 = 0.2
+        self.beta_ssim = 0.8
+    
+    def create_dataloaders(self, dataset_path, dataset_type='images', 
+                          batch_size=8, num_workers=4, patch_size=256):
+        """Create training and validation dataloaders"""
+        
+        if dataset_type == 'images':
+            # For image datasets
+            dataset = ImageDataset(
+                image_dir=dataset_path,
+                patch_size=patch_size,
+                channels='Y'  # Y channel only for DPP
+            )
+        elif dataset_type == 'videos':
+            # For video datasets
+            dataset = VideoPatchDataset(
+                video_dir=dataset_path,
+                patch_size=patch_size,
+                channels='Y'
+            )
+        else:
+            raise ValueError("dataset_type must be 'images' or 'videos'")
+        
+        # Split dataset
+        train_size = int(0.8 * len(dataset))
+        val_size = len(dataset) - train_size
+        
+        train_dataset, val_dataset = torch.utils.data.random_split(
+            dataset, [train_size, val_size]
+        )
+        
+        # Create dataloaders
+        train_loader = DataLoader(
+            train_dataset,
+            batch_size=batch_size,
+            shuffle=True,
+            num_workers=num_workers,
+            pin_memory=True if self.device == 'cuda' else False
+        )
+        
+        val_loader = DataLoader(
+            val_dataset,
+            batch_size=batch_size,
+            shuffle=False,
+            num_workers=num_workers,
+            pin_memory=True if self.device == 'cuda' else False
+        )
+        
+        return train_loader, val_loader
+    
+    def train_epoch(self, train_loader):
+        """Train for one epoch"""
+        self.preprocessor.train()
+        total_losses = {'total': 0, 'perceptual': 0, 'rate': 0, 'fidelity': 0}
+        num_batches = 0
+        
+        for batch_idx, batch in enumerate(train_loader):
+            losses = self.train_step(batch)
+            
+            # Accumulate losses
+            for key in total_losses:
+                total_losses[key] += losses[f'{key}_loss']
+            num_batches += 1
+            
+            if batch_idx % 50 == 0:
+                print(f"Batch {batch_idx}/{len(train_loader)}: "
+                      f"Loss = {losses['total_loss']:.4f}")
+        
+        # Average losses
+        avg_losses = {k: v/num_batches for k, v in total_losses.items()}
+        return avg_losses
+    
+    def validate(self, val_loader):
+        """Validation step"""
+        self.preprocessor.eval()
+        total_losses = {'total': 0, 'perceptual': 0, 'rate': 0, 'fidelity': 0}
+        num_batches = 0
+        
+        with torch.no_grad():
+            for batch in val_loader:
+                losses = self.train_step(batch)  # No gradient computation
+                
+                for key in total_losses:
+                    total_losses[key] += losses[f'{key}_loss']
+                num_batches += 1
+        
+        avg_losses = {k: v/num_batches for k, v in total_losses.items()}
+        return avg_losses
+    
+    def train_step(self, batch):
+        """Single training step (same as before but adapted for batch from dataset)"""
+        # Get frames from batch
+        frames = batch['frames'].to(self.device)
+        
+        # Ensure correct shape [B, 1, H, W] for Y channel
+        if frames.dim() == 3:
+            frames = frames.unsqueeze(1)
+        
+        # Random QP for training
+        qp = np.random.randint(0, 6)
+        
+        # Preprocess frames
+        preprocessed = self.preprocessor(frames)
+        
+        # Process through virtual codec
+        batch_size = frames.shape[0]
+        reconstructed_batch = []
+        dct_coeffs_batch = []
+        
+        for i in range(batch_size):
+            recon, dct = self.process_frame_virtual_codec(preprocessed[i], qp)
+            reconstructed_batch.append(recon)
+            dct_coeffs_batch.append(dct)
+        
+        reconstructed = torch.stack(reconstructed_batch)
+        dct_coeffs = torch.stack(dct_coeffs_batch)
+        
+        # Compute losses
+        rate_loss = self.compute_rate_loss(dct_coeffs)
+        
+        # Convert to RGB for perceptual loss
+        reconstructed_rgb = reconstructed.unsqueeze(1).repeat(1, 3, 1, 1)
+        perceptual_loss = self.compute_perceptual_loss(reconstructed_rgb)
+        
+        fidelity_loss = self.compute_fidelity_loss(frames, reconstructed.unsqueeze(1))
+        
+        # Total loss
+        total_loss = (self.gamma_perceptual * perceptual_loss + 
+                     self.lambda_rate * rate_loss + 
+                     fidelity_loss)
+        
+        # Backpropagation (only if training)
+        if self.preprocessor.training:
+            self.optimizer.zero_grad()
+            total_loss.backward()
+            self.optimizer.step()
+        
+        return {
+            'total_loss': total_loss.item(),
+            'perceptual_loss': perceptual_loss.item(),
+            'rate_loss': rate_loss.item(),
+            'fidelity_loss': fidelity_loss.item()
+        }
+    
+    # Keep all other methods from original trainer
+    def compute_rate_loss(self, dct_coeffs):
+        """Same as original"""
+        normalized = self.codec.divisive_normalization(dct_coeffs)
+        scale = torch.std(normalized)
+        log_likelihood = -torch.abs(normalized) / scale - torch.log(2 * scale)
+        rate = -torch.sum(log_likelihood) / np.log(2)
+        return rate
+    
+    def compute_perceptual_loss(self, reconstructed_rgb):
+        """Same as original"""
+        mos_dist = self.perceptual_model(reconstructed_rgb)
+        scores = torch.arange(1, 6, dtype=torch.float32).to(self.device)
+        expected_mos = torch.sum(mos_dist * scores, dim=1)
+        return -torch.mean(expected_mos)
+    
+    def compute_fidelity_loss(self, original, reconstructed):
+        """Same as original"""
+        l1_loss = F.l1_loss(reconstructed, original)
+        ssim_loss = 1 - self.ssim(original, reconstructed)
+        return self.alpha_l1 * l1_loss + self.beta_ssim * ssim_loss
+    
+    def ssim(self, x, y):
+        """Same as original"""
+        C1 = 0.01 ** 2
+        C2 = 0.03 ** 2
+        
+        mu_x = F.avg_pool2d(x, 3, 1, padding=1)
+        mu_y = F.avg_pool2d(y, 3, 1, padding=1)
+        
+        sigma_x = F.avg_pool2d(x ** 2, 3, 1, padding=1) - mu_x ** 2
+        sigma_y = F.avg_pool2d(y ** 2, 3, 1, padding=1) - mu_y ** 2
+        sigma_xy = F.avg_pool2d(x * y, 3, 1, padding=1) - mu_x * mu_y
+        
+        ssim = ((2 * mu_x * mu_y + C1) * (2 * sigma_xy + C2)) / \
+               ((mu_x ** 2 + mu_y ** 2 + C1) * (sigma_x + sigma_y + C2))
+        
+        return torch.mean(ssim)
+    
+    def process_frame_virtual_codec(self, frame, qp):
+        """Same as original but for single frame"""
+        y_channel = frame.squeeze() if frame.dim() > 2 else frame
+        
+        h, w = y_channel.shape
+        dct_coeffs = torch.zeros_like(y_channel)
+        
+        for i in range(0, h - 3, 4):
+            for j in range(0, w - 3, 4):
+                block = y_channel[i:i+4, j:j+4]
+                dct_block = torch.tensor(
+                    self.codec.block_dct_4x4(block.cpu().numpy())
+                ).to(self.device)
+                dct_coeffs[i:i+4, j:j+4] = dct_block
+        
+        quantized, qstep = self.codec.quantize(dct_coeffs, qp)
+        
+        if self.training:
+            dequantized = quantized * qstep
+        else:
+            dequantized = torch.round(quantized) * qstep
+        
+        reconstructed = dequantized
+        return reconstructed, dct_coeffs
+
+
+# Example usage with real datasets
+if __name__ == "__main__":
+    # Initialize trainer with dataset support
+    trainer = DPPTrainerWithDataset(device='cuda' if torch.cuda.is_available() else 'cpu')
+    
+    # Create dataloaders for your dataset
+    # Option 1: Image dataset
+    train_loader, val_loader = trainer.create_dataloaders(
+        dataset_path="/path/to/your/image/dataset",  # Replace with your path
+        dataset_type='images',
+        batch_size=16,
+        patch_size=256
+    )
+    
+    # Option 2: Video dataset
+    # train_loader, val_loader = trainer.create_dataloaders(
+    #     dataset_path="/path/to/your/video/dataset",
+    #     dataset_type='videos',
+    #     batch_size=8,
+    #     patch_size=256
+    # )
+    
+    # Training loop
+    num_epochs = 100
+    best_val_loss = float('inf')
+    
+    print("Starting training...")
+    for epoch in range(num_epochs):
+        print(f"\nEpoch {epoch+1}/{num_epochs}")
+        
+        # Train
+        train_losses = trainer.train_epoch(train_loader)
+        print(f"Train Loss: {train_losses['total']:.4f}")
+        
+        # Validate
+        val_losses = trainer.validate(val_loader)
+        print(f"Val Loss: {val_losses['total']:.4f}")
+        
+        # Save best model
+        if val_losses['total'] < best_val_loss:
+            best_val_loss = val_losses['total']
+            torch.save({
+                'epoch': epoch,
+                'model_state_dict': trainer.preprocessor.state_dict(),
+                'optimizer_state_dict': trainer.optimizer.state_dict(),
+                'val_loss': best_val_loss,
+            }, 'best_dpp_model.pth')
+            print(f"Saved new best model with val loss: {best_val_loss:.4f}")
+    
+    print("Training completed!")
