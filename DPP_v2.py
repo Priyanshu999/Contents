@@ -290,14 +290,31 @@ class DPPTrainer:
         )
         
     def compute_rate_loss(self, dct_coeffs):
-        normalized = self.codec.divisive_normalization(dct_coeffs)
+        """
+        Compute rate loss for DCT coefficients
+        dct_coeffs: [batch_size, channels, height, width]
+        """
+        batch_size, channels, height, width = dct_coeffs.shape
+        total_rate = 0.0
         
-        scale = torch.std(normalized)
-        log_likelihood = -torch.abs(normalized) / scale - torch.log(2 * scale)
+        for b in range(batch_size):
+            for c in range(channels):
+                # Process each channel of each image separately
+                coeffs = dct_coeffs[b, c]  # [height, width]
+                normalized = self.codec.divisive_normalization(coeffs)
+                
+                scale = torch.std(normalized)
+                if scale > 0:
+                    log_likelihood = -torch.abs(normalized) / scale - torch.log(2 * scale)
+                else:
+                    # Handle case where std is 0
+                    log_likelihood = torch.zeros_like(normalized)
+                
+                rate = -torch.sum(log_likelihood) / np.log(2)  # Convert to bits
+                total_rate += rate
         
-        rate = -torch.sum(log_likelihood) / np.log(2)  # Convert to bits
-        
-        return rate
+        return total_rate / (batch_size * channels)  # Average rate
+
     
     # def compute_perceptual_loss(self, reconstructed_rgb):
     #     """Compute perceptual loss using frozen perceptual model"""
@@ -338,40 +355,47 @@ class DPPTrainer:
     def process_frame_virtual_codec(self, frame, qp):
         batch_size, _, h, w = frame.shape
         
-        dct_coeffs = torch.zeros_like(frame)
+        dct_coeffs = torch.zeros(batch_size, 1, h, w, device=self.device, dtype=frame.dtype)
         
         for b in range(batch_size):
-            #TODO: there could be an edge case here, if the frame is not divisible by 4 
             for i in range(0, h - 3, 4):
                 for j in range(0, w - 3, 4):
                     block = frame[b, 0, i:i+4, j:j+4]
-                    dct_block = torch.tensor(
-                        self.codec.block_dct_4x4(block.cpu().numpy()),
-                        device=self.device
+                    dct_block = self.codec.block_dct_4x4(block.detach().cpu().numpy())
+                    dct_coeffs[b, 0, i:i+4, j:j+4] = torch.tensor(
+                        dct_block,
+                        device=self.device,
+                        dtype=frame.dtype
                     )
-                    dct_coeffs[b, 0, i:i+4, j:j+4] = dct_block
         
-        # Quantize
         quantized, qstep = self.codec.quantize(dct_coeffs, qp)
         
-        # For training, add noise instead of rounding
         if self.preprocessor.training:
-            dequantized = quantized * qstep
+            noise = torch.rand_like(quantized) - 0.5
+            dequantized = (quantized + noise) * qstep
         else:
             dequantized = torch.round(quantized) * qstep
         
-        reconstructed = torch.zeros_like(frame)
+        reconstructed = torch.zeros(batch_size, 1, h, w, device=self.device, dtype=frame.dtype)
+        
         for b in range(batch_size):
             for i in range(0, h - 3, 4):
                 for j in range(0, w - 3, 4):
                     block = dequantized[b, 0, i:i+4, j:j+4]
-                    idct_block = torch.tensor(
-                        self.codec.block_idct_4x4(block.cpu().numpy()),
-                        device=self.device
+                    idct_block = self.codec.block_idct_4x4(block.detach().cpu().numpy())
+                    reconstructed[b, 0, i:i+4, j:j+4] = torch.tensor(
+                        idct_block,
+                        device=self.device,
+                        dtype=frame.dtype
                     )
-                    reconstructed[b, 0, i:i+4, j:j+4] = idct_block
+        
+        if h % 4 != 0:
+            reconstructed[:, :, -(h % 4):, :] = frame[:, :, -(h % 4):, :]
+        if w % 4 != 0:
+            reconstructed[:, :, :, -(w % 4):] = frame[:, :, :, -(w % 4):]
         
         return reconstructed, dct_coeffs
+
     
     def train_step(self, batch):
         self.preprocessor.train()
@@ -527,6 +551,8 @@ class DPPTrainer:
     #         output = np.clip(output * 255, 0, 255).astype(np.uint8)
             
     #     return output
+    
+   
     
 
 
